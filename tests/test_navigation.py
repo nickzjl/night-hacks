@@ -100,3 +100,27 @@ def test_joystick_on_the_board_drives_cell_and_lcd_over_serial():
         asyncio.run(run())
     finally:
         link.stop()
+
+
+def test_joystick_bounce_guard_and_press_to_scan(monkeypatch):
+    monkeypatch.setenv("SERIAL_PORT", "off")
+    monkeypatch.setenv("MOCK_CLAUDE", "true")
+    monkeypatch.setenv("BLE", "off")
+    import backend.main as main
+    hub = main.Hub()
+    hub.link.write_frame = lambda mask, lcd=None: True
+
+    async def run():
+        await hub.on_board_line("JOY P")  # empty cell: asks for a scan
+        assert hub.force_recognize and hub.pacer.lcd == ["LEXIS READY", "SCANNING..."]
+        hub._last_joy = ("", 0.0)
+        await hub.pacer.say("door")
+        await hub.on_board_line("JOY R")
+        assert hub.pacer.index == 1
+        await hub.on_board_line("JOY L")  # immediate opposite = spring-back, ignored
+        assert hub.pacer.index == 1
+        hub._last_joy = ("next", time.monotonic() - 1)
+        await hub.on_board_line("JOY L")  # a real move later on
+        assert hub.pacer.index == 0
+
+    asyncio.run(run())

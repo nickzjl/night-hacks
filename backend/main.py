@@ -48,6 +48,18 @@ REPEAT_SUPPRESS_S = float(os.getenv("REPEAT_SUPPRESS_S", "10"))
 LOOKAHEAD_S = float(os.getenv("LOOKAHEAD_S", "4.5"))  # start recognizing this long before a word ends
 NAV_IDLE_S = float(os.getenv("NAV_IDLE_S", "6"))       # manual mode: no new camera word while reading
 MESSAGE_HOLD_S = float(os.getenv("MESSAGE_HOLD_S", "120"))  # an unread message keeps the cell this long
+JOY_BOUNCE_S = float(os.getenv("JOY_BOUNCE_S", "0.35"))  # an opposite move this soon is spring-back
+
+
+def joystick_map(spec: str | None = None) -> dict[str, str]:
+    """Board direction -> action. JOY_MAP="L=prev,R=next,P=start" by default; for a stick
+    mounted a quarter turn off, e.g. "U=next,D=prev,P=start". Actions: prev, next, start."""
+    mapping = {}
+    for part in (spec or os.getenv("JOY_MAP", "L=prev,R=next,P=start")).split(","):
+        key, _, action = part.partition("=")
+        if key.strip() and action.strip().lower() in ("prev", "next", "start"):
+            mapping[key.strip().upper()] = action.strip().lower()
+    return mapping
 FRAME_FRESH_S = 4.0  # Bluetooth frames arrive about once a second
 UI_FRAME_EVERY_S = 0.2
 PHONE_SILENT_S = 5.0  # no frame or telemetry for this long = dead link (e.g. cable pulled, Wi-Fi drop)
@@ -73,6 +85,9 @@ class Hub:
         self.pacer = BraillePacer(self.link, self.on_braille)
         self.ble = BLELink(self.on_frame, self.on_phone_json, self.event)
         self.recognition_paused_until = 0.0  # loved-ones' messages own the cell until then
+        self.joy_map = joystick_map()
+        self._last_joy = ("", 0.0)
+        self.scan_requested = False
         self.lexis = Lexis(self)
         self._last_ui_frame = 0.0
 
@@ -134,12 +149,25 @@ class Hub:
         self.event(f"board: {line}")
         if not line.startswith("JOY "):
             return
-        move = line.split()[-1]
-        if move == "L":
+        action = self.joy_map.get(line.split()[-1])
+        if not action:
+            return
+        now = time.monotonic()
+        last, last_at = self._last_joy
+        if {action, last} == {"prev", "next"} and now - last_at < JOY_BOUNCE_S:
+            self.event(f"joystick: ignored {action} (spring-back)")
+            return
+        self._last_joy = (action, now)
+        if not self.pacer.cells:
+            # Nothing to read yet: any move asks the camera what's ahead right now.
+            self.force_recognize = self.scan_requested = True
+            await self.pacer.show_status(["LEXIS READY", "SCANNING..."])
+            return
+        if action == "prev":
             await self.pacer.step(-1)
-        elif move == "R":
+        elif action == "next":
             await self.pacer.step(1)
-        elif move == "P":
+        elif action == "start":
             await self.pacer.restart()
 
     async def braille_message(self, text: str, sender: str) -> float:
@@ -238,6 +266,7 @@ class Hub:
             if not forced and (not self.auto or not cell_ready or message_playing or now - self.last_request_at < RECOGNIZE_EVERY_S):
                 continue
             self.force_recognize = False
+            scan = self.scan_requested
             self.recognizing = True
             self.last_request_at = now
             await self.broadcast_ui(self.state())
@@ -247,6 +276,8 @@ class Hub:
                 self.lexis.add_observation(result.word, result.kind, result.scene)
                 await self.send_phones({"type": "status", "text": f"Saw: {result.word or 'nothing'} ({result.latency_ms} ms)"})
                 if not result.word:
+                    if self.scan_requested:
+                        await self.pacer.show_status(["NOTHING SEEN", "PRESS TO SCAN"])
                     continue
                 source = f"{result.model}, {result.latency_ms} ms"
                 if forced:
@@ -270,6 +301,8 @@ class Hub:
                 self.last_request_at = time.monotonic() + 3  # back off a little
             finally:
                 self.recognizing = False
+                if scan:
+                    self.scan_requested = False
                 await self.broadcast_ui(self.state())
 
     async def status_loop(self) -> None:
@@ -418,6 +451,17 @@ async def api_mode(payload: dict = Body(...)):
     """{"mode": "manual"} (joystick) or {"mode": "auto"} (timed playback)."""
     await hub.command({"type": "mode", "mode": payload.get("mode", "")})
     return hub.pacer.state()
+
+
+@app.post("/api/joystick-map")
+async def api_joystick_map(payload: dict = Body(...)):
+    """Re-map joystick directions at runtime: {"map": "U=next,D=prev,P=start"}."""
+    mapping = joystick_map(str(payload.get("map", "")))
+    if not mapping:
+        return {"error": "use e.g. L=prev,R=next,P=start"}
+    hub.joy_map = mapping
+    hub.event(f"joystick map: {mapping}")
+    return mapping
 
 
 BOARD_COMMANDS = {"JV", "JC", "TS", "HN", "LA"}

@@ -33,7 +33,7 @@ except ImportError:  # pragma: no cover - running as a script
 
 SPACE = "␣"  # label text_to_cells gives a space
 LCD_WIDTH = 16
-IDLE_LCD = ["LEXIS READY", "WAITING FOR TEXT"]
+IDLE_LCD = ["LEXIS READY", "PRESS TO SCAN"]
 
 
 def lcd_window(text: str, pos: int, width: int = LCD_WIDTH) -> str:
@@ -262,6 +262,14 @@ class BraillePacer:
         pos = sum(1 for lab in self.labels[:self.index] if lab != "#")
         shown = "_" if label == SPACE else label
         return [lcd_window(self.word, pos), f"CHAR {self.index + 1}/{len(self.labels)}: {shown}"]
+
+    async def show_status(self, rows: list[str]) -> None:
+        """Put a status message on the LCD while no text is loaded (cell stays flat)."""
+        if self.cells:
+            return
+        self.lcd = list(rows)
+        await asyncio.to_thread(self.link.write_frame, 0, self.lcd)
+        await self.on_change(self.state())
 
     async def _show(self, index: int, mask: int) -> None:
         self.index, self.mask = index, mask
