@@ -2,7 +2,7 @@
 
 The phone advertises the Night Hacks service and the Mac connects as the central, so the
 Mac keeps its own Wi-Fi (and internet for Claude). Packets from the phone (notifications):
-  b"J" + JSON                                   telemetry / hello
+  b"T" + JSON / b"J" + JSON                     telemetry / control (companion, location, hello)
   b"S" + frame id + uint32 length (BE) + bytes  first chunk of a JPEG frame
   b"C" + frame id + bytes                       following chunks
 Messages to the phone are JSON written to the downlink characteristic.
@@ -108,7 +108,7 @@ class BLELink:
 
     def _on_packet(self, _characteristic, data: bytearray) -> None:
         kind = data[:1]
-        if kind == b"J":
+        if kind in (b"J", b"T"):  # T = telemetry, J = control messages
             try:
                 self.on_json(json.loads(bytes(data[1:])))
             except ValueError:

@@ -68,3 +68,7 @@ xcuserdata/
 
 # --- Night Hacks ---
 .fake-feather
+
+# Lexis private data (phone numbers, iMessage threads)
+backend/contacts.json
+backend/lexis_state.json

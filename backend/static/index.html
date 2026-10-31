@@ -42,6 +42,18 @@
   button { cursor: pointer; } button:hover { border-color: #3a4256; }
   button.primary { background: #2b5cff; border-color: #2b5cff; }
   button.on { background: #1f3d2b; border-color: var(--ok); }
+  button.danger { background: #4a1d1d; border-color: var(--bad); }
+  .lcd { display: inline-block; margin-top: 14px; padding: 10px 14px; background: #1b3a12; border: 3px solid #0e1a09; border-radius: 6px;
+         font: 600 22px/1.25 ui-monospace, Menlo, monospace; color: #b8ff7a; letter-spacing: .12em; white-space: pre; text-shadow: 0 0 6px #b8ff7a66; }
+  .nav { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .nav button.joy { min-width: 48px; font-size: 18px; }
+  .lexis { padding: 0 20px 16px; }
+  .lexis-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 12px; }
+  .kv { font-size: 14px; line-height: 1.6; }
+  .kv b { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .big { font-size: 22px; font-weight: 700; }
+  ul.plain { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.7; }
+  .msg-in { color: #9ecbff; } .msg-out { color: #b8f5c8; }
   input { min-width: 0; flex: 1; }
   .row { display: flex; gap: 8px; margin-top: 10px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
@@ -86,6 +98,14 @@
           <div class="meta" id="braille-meta"></div>
         </div>
       </div>
+      <div class="lcd" id="lcd" title="Mirror of the 16x2 LCD">LEXIS READY     
+WAITING FOR TEXT</div>
+      <div class="nav">
+        <button class="joy" id="btn-left" title="Joystick left">◀</button>
+        <button class="joy" id="btn-reset" title="Joystick press: first character">⟲</button>
+        <button class="joy" id="btn-right" title="Joystick right">▶</button>
+        <button id="btn-mode">Mode: manual</button>
+      </div>
       <div class="controls" id="demo-words"></div>
       <form class="row" id="say-form">
         <input id="say-input" placeholder="Type a word to spell" maxlength="12" autocomplete="off" />
@@ -100,6 +120,22 @@
     </div>
   </section>
 </main>
+<section class="lexis">
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="label" style="margin:0">Lexis · iMessage companion</div>
+      <span class="pill" id="p-imessage">iMessage —</span>
+      <span class="pill" id="p-sharing">sharing —</span>
+      <button class="danger" id="btn-stop-sharing">Stop sharing now</button>
+    </div>
+    <div class="lexis-grid">
+      <div class="kv" id="lx-journey"></div>
+      <div><div class="label">Approved contacts</div><ul class="plain" id="lx-contacts"></ul></div>
+      <div><div class="label">Recent scenes</div><ul class="plain" id="lx-obs"></ul></div>
+      <div><div class="label">iMessages</div><ul class="plain" id="lx-log"></ul></div>
+    </div>
+  </div>
+</section>
 <div class="grid2" style="padding: 0 20px 20px">
   <div class="panel"><div class="label">Events</div><pre id="events"></pre></div>
   <div class="panel"><div class="label">Serial (board replies)</div><pre id="serial-lines"></pre></div>
@@ -166,7 +202,11 @@ function render(s) {
   if (!b.labels.length) word.textContent = "—";
   b.labels.forEach((ch, i) => { const sp = document.createElement("span"); sp.textContent = ch; if (i === b.index) sp.className = "cur"; word.appendChild(sp); });
   const dots = [1,2,3,4,5,6].filter(d => b.mask & (1 << (d - 1)));
-  $("braille-meta").textContent = `${b.busy ? "spelling" : "idle"} · dots ${dots.join("-") || "none"} · hold ${b.timing_ms.hold} ms, gap ${b.timing_ms.gap} ms`;
+  $("lcd").textContent = (b.lcd || ["", ""]).map(r => (r || "").padEnd(16).slice(0, 16)).join("\n");
+  $("btn-mode").textContent = `Mode: ${b.mode}`;
+  $("btn-mode").classList.toggle("on", b.mode === "manual");
+  ["btn-left", "btn-reset", "btn-right"].forEach(id => $(id).disabled = !b.labels.length);
+  $("braille-meta").textContent = `${b.mode === "manual" ? (b.labels.length ? `holding${b.unread ? " · unread message" : ""}` : "waiting") : (b.busy ? "spelling" : "idle")}${b.next ? ` · next ${b.next}` : ""} · dots ${dots.join("-") || "none"} · letter ${b.timing_ms.hold + b.timing_ms.gap} ms · word gap ${b.timing_ms.word_gap} ms`;
 
   $("btn-auto").classList.toggle("on", ai.auto);
   $("btn-auto").textContent = `Auto recognition: ${ai.auto ? "on" : "off"}`;
@@ -175,12 +215,23 @@ function render(s) {
     (last.error ? `Error: ${last.error}` : last.model ? `Last: ${last.word || "(nothing)"} · ${last.kind} · ${last.latency_ms} ms · ${last.model}` : `Runs every ${ai.every_s} s when the cell is idle.`);
 
   $("events").textContent = s.events.map(e => `${e.t}  ${e.text}`).reverse().join("\n");
+  renderLexis(s.lexis);
   $("serial-lines").textContent = [`sent ${ser.last_sent ?? "—"} · ack ${ser.last_ack ?? "—"}${ser.ack_age_s != null ? ` (${ser.ack_age_s} s ago)` : ""}`, ...ser.lines.slice().reverse()].join("\n");
 }
 
 $("btn-auto").onclick = () => send({ type: "auto", enabled: !(state && state.recognizer.auto) });
 $("btn-recognize").onclick = () => send({ type: "recognize" });
 $("btn-clear").onclick = () => send({ type: "clear" });
+$("btn-left").onclick = () => send({ type: "nav", dir: -1 });
+$("btn-right").onclick = () => send({ type: "nav", dir: 1 });
+$("btn-reset").onclick = () => send({ type: "nav", dir: 0 });
+$("btn-mode").onclick = () => send({ type: "mode", mode: state && state.braille.mode === "manual" ? "auto" : "manual" });
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowLeft") send({ type: "nav", dir: -1 });
+  if (e.key === "ArrowRight") send({ type: "nav", dir: 1 });
+  if (e.key === "Home") send({ type: "nav", dir: 0 });
+});
 $("btn-selftest").onclick = () => send({ type: "selftest" });
 $("say-form").onsubmit = e => { e.preventDefault(); const w = $("say-input").value.trim(); if (w) send({ type: "say", word: w }); $("say-input").value = ""; };
 
@@ -204,6 +255,35 @@ $("btn-webcam").onclick = async () => {
     $("btn-webcam").textContent = "Stop Mac webcam";
   } catch (e) { alert("Webcam unavailable: " + e.message); }
 };
+
+function ago(sec) { return sec < 45 ? "just now" : sec < 3600 ? `${Math.round(sec / 60)} min ago` : `${(sec / 3600).toFixed(1)} h ago`; }
+function esc(t) { const d = document.createElement("div"); d.textContent = t ?? ""; return d.innerHTML; }
+function li(html, cls) { const el = document.createElement("li"); if (cls) el.className = cls; el.textContent = html; return el; }
+function renderLexis(lx) {
+  if (!lx) return;
+  const im = lx.imessage;
+  setPill("p-imessage", im.connected ? "ok" : im.enabled ? "warn" : "bad",
+    im.connected ? `iMessage <b>${im.agent_handle || "connected"}</b>` : `iMessage <b>offline</b> · ${im.last_error || ""}`);
+  setPill("p-sharing", lx.sharing ? "ok" : "warn", lx.sharing ? "sharing <b>on</b>" : "sharing <b>off</b>");
+  const j = lx.journey, loc = lx.location;
+  const lines = [`<div class="big">${esc(lx.wearer)}</div>`];
+  if (j) {
+    lines.push(`<div><b>Journey</b>${j.destination ? "to " + esc(j.destination) : "no destination"} · every ${Math.round(j.interval_s / 60)} min</div>`);
+    lines.push(`<div><b>Status</b>${j.arrived_at ? "arrived" : j.distance_m != null ? `${j.distance_m} m to go` : "walking"}</div>`);
+  } else lines.push(`<div><b>Journey</b>none</div>`);
+  lines.push(loc ? `<div><b>Location</b>${esc(loc.address || "unknown street")} · ${ago(loc.age_s)} · <a href="${loc.map}" target="_blank" style="color:#9ecbff">map</a></div>` : `<div><b>Location</b>none ${lx.sharing ? "yet" : "(not sharing)"}</div>`);
+  $("lx-journey").innerHTML = lines.join("");
+  const c = $("lx-contacts"); c.innerHTML = "";
+  lx.contacts.forEach(k => c.appendChild(li(`${k.name} ${k.handle} · ${k.linked ? "texted Lexis" : "hasn't texted yet"}${k.location ? (k.subscribed ? " · updates" : " · paused") : " · Braille only"}`)));
+  if (!lx.contacts.length) c.appendChild(li("none - add backend/contacts.json"));
+  const o = $("lx-obs"); o.innerHTML = "";
+  lx.observations.forEach(x => o.appendChild(li(`${ago(x.age_s)} · ${x.word || "-"}${x.scene ? " · " + x.scene : ""}`)));
+  if (!lx.observations.length) o.appendChild(li("none yet"));
+  const l = $("lx-log"); l.innerHTML = "";
+  lx.log.forEach(m => l.appendChild(li(`${m.t} ${m.dir === "in" ? "←" : "→"} ${m.who}: ${m.text}`, m.dir === "in" ? "msg-in" : "msg-out")));
+  if (!lx.log.length) l.appendChild(li("no messages yet"));
+}
+$("btn-stop-sharing").onclick = () => send({ type: "stop_sharing" });
 
 connect();
 </script>

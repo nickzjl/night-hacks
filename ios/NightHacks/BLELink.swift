@@ -5,7 +5,8 @@ import Foundation
 /// The phone is the peripheral and the Mac backend (bleak) connects as the central.
 ///
 /// Uplink notifications (phone -> Mac), one packet each:
-///   "J" + JSON                                  telemetry / hello, must fit one packet
+///   "T" + JSON                                  telemetry; a newer one replaces a queued one
+///   "J" + JSON                                  control (companion, location, hello); never dropped
 ///   "S" + frameId + UInt32 length (BE) + bytes  first chunk of a JPEG frame
 ///   "C" + frameId + bytes                       following chunks
 /// Downlink writes (Mac -> phone): one JSON message per write (braille, status).
@@ -39,15 +40,17 @@ final class BLELink: NSObject, CBPeripheralManagerDelegate {
         queue.sync { connected }
     }
 
-    func sendJSON(_ object: [String: Any]) {
+    func sendJSON(_ object: [String: Any], replaceable: Bool = false) {
         guard let json = try? JSONSerialization.data(withJSONObject: object) else { return }
         queue.async {
             guard self.connected, let central = self.central else { return }
-            let packet = Data("J".utf8) + json
+            let kind = replaceable ? "T" : "J"
+            let packet = Data(kind.utf8) + json
             guard packet.count <= central.maximumUpdateValueLength else { return }
-            // Fresh telemetry jumps ahead of frame chunks; older telemetry is dropped.
-            self.packets.removeAll { $0.first == UInt8(ascii: "J") }
-            self.packets.insert(packet, at: 0)
+            // Small messages jump ahead of frame chunks; only stale telemetry is dropped.
+            if replaceable { self.packets.removeAll { $0.first == UInt8(ascii: "T") } }
+            let firstChunk = self.packets.firstIndex { $0.first == UInt8(ascii: "S") || $0.first == UInt8(ascii: "C") }
+            self.packets.insert(packet, at: firstChunk ?? self.packets.count)
             self.pump()
         }
     }

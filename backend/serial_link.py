@@ -38,6 +38,13 @@ FAKE_FEATHER = Path(__file__).resolve().parent.parent / ".fake-feather"
 #   hex              firmware/code.py (CircuitPython): two hex digits, e.g. "19"
 SERIAL_FORMAT = os.getenv("SERIAL_FORMAT", "servo").strip().lower()
 SELF_TEST = {"servo": "TS", "hex": "T"}
+LCD_WIDTH = 16
+
+
+def lcd_text(text: str) -> str:
+    """What the 16x2 HD44780 can show: plain ASCII, one row's width, no newlines."""
+    cleaned = "".join(ch if 32 <= ord(ch) < 127 else "?" for ch in (text or ""))
+    return cleaned[:LCD_WIDTH]
 
 
 def format_mask(mask: int, fmt: str | None = None) -> str:
@@ -76,6 +83,10 @@ class SerialLink:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._lcd_sent: list[str | None] = [None, None]
+        # Called from the serial thread: board events ("JOY L") and (re)connects.
+        self.on_line = None
+        self.on_connect = None
 
     @property
     def enabled(self) -> bool:
@@ -94,14 +105,31 @@ class SerialLink:
     def write_mask(self, mask: int) -> bool:
         return self.write_line(format_mask(mask))
 
+    def write_frame(self, mask: int, lcd: list[str] | None = None) -> bool:
+        """Servos and LCD rows in one write. LCD rows are only re-sent when they change.
+        (Kiya's sketch takes each L1:/L2: line as text up to the newline.)"""
+        lines = [format_mask(mask)]
+        pending = []
+        if lcd and SERIAL_FORMAT == "servo":
+            for row, text in enumerate(lcd[:2]):
+                text = lcd_text(text)
+                if self._lcd_sent[row] != text:
+                    lines.append(f"L{row + 1}:{text}")
+                    pending.append((row, text))
+        ok = self.write_line("\n".join(lines))
+        if ok:
+            for row, text in pending:
+                self._lcd_sent[row] = text
+        return ok
+
     def write_line(self, line: str) -> bool:
-        self.last_sent = line
+        self.last_sent = line.split("\n", 1)[0]
         with self._lock:
             ser = self._ser
             if ser is None:
                 return False
             try:
-                ser.write((line + "\n").encode("ascii"))
+                ser.write((line + "\n").encode("ascii", "replace"))
                 return True
             except Exception as exc:  # port vanished (unplugged, board reset)
                 self.last_error = f"write failed: {exc}"
@@ -145,8 +173,19 @@ class SerialLink:
         self.port = port
         self.connected = True
         self.last_error = ""
-        self.write_mask(0)  # start from a blank cell
+        self._take_control()
         return True
+
+    def _take_control(self) -> None:
+        """Put Kiya's sketch in Mac mode (joystick reports moves, the Mac drives the LCD),
+        then have the backend re-send the current cell and LCD."""
+        self._lcd_sent = [None, None]
+        if SERIAL_FORMAT == "servo":
+            self.write_line("HN\nLC")
+        else:
+            self.write_mask(0)
+        if self.on_connect:
+            self.on_connect()
 
     def _close(self) -> None:
         with self._lock:
@@ -193,3 +232,7 @@ class SerialLink:
             if text.startswith("OK "):
                 self.last_ack = text[3:].strip()
                 self.last_ack_at = time.monotonic()
+            elif text.startswith(("JOY", "INFO", "ERR")) and self.on_line:
+                self.on_line(text)  # joystick moves, joystick readouts, boot info, errors
+            elif text == "READY":
+                self._take_control()  # the board rebooted and forgot Mac mode

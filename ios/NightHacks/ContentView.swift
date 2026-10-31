@@ -11,6 +11,7 @@ struct ContentView: View {
                 header
                 proximity
                 braille
+                companion
                 connection
                 controls
                 diagnostics
@@ -79,6 +80,51 @@ struct ContentView: View {
             }
         }
         .font(.system(size: 34, weight: .bold, design: .monospaced))
+    }
+
+    private var companion: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("LEXIS COMPANION").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Toggle("Share with trusted contacts", isOn: Binding(
+                get: { engine.sharing },
+                set: { engine.setSharing($0) }
+            ))
+            .font(.headline)
+            if engine.sharing && !engine.locationText.isEmpty {
+                Text(engine.locationText).font(.footnote).foregroundStyle(.secondary)
+            }
+            HStack {
+                TextField("Destination (place or address)", text: $engine.destinationName)
+                    .textInputAutocapitalization(.words)
+                    .onChange(of: engine.destinationName) { _, _ in engine.destinationEdited() }
+                    .padding(10)
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                Button("Here") { engine.useCurrentSpotAsDestination() }
+                    .buttonStyle(.bordered)
+            }
+            Picker("Updates every", selection: $engine.intervalMinutes) {
+                ForEach([1, 2, 5, 10], id: \.self) { Text("\($0) min").tag($0) }
+            }
+            .pickerStyle(.segmented)
+            if engine.journeyActive {
+                Button("End journey") { engine.endJourney() }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Button("Start journey") { engine.startJourney() }
+                    .buttonStyle(.borderedProminent)
+            }
+            if engine.sharing {
+                Button(role: .destructive) { engine.stopSharingNow() } label: {
+                    Text("Stop sharing now").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+            if !engine.companionStatus.isEmpty {
+                Text(engine.companionStatus).font(.footnote).foregroundStyle(.secondary)
+            }
+        }
     }
 
     private var connection: some View {

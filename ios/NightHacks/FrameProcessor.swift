@@ -103,7 +103,7 @@ final class FrameProcessor: NSObject, ARSessionDelegate {
         }
         if now - lastBLETelemetry >= 0.4 {
             lastBLETelemetry = now
-            ble.sendJSON(telemetry)
+            ble.sendJSON(telemetry, replaceable: true)
         }
 
         if now - lastSnapshot >= 0.1 {

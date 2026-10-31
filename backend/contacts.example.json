@@ -1,0 +1,7 @@
+{
+  "wearer": { "name": "Kiya", "pronouns": "he/him" },
+  "contacts": [
+    { "name": "Nick", "handle": "+14155550123", "braille": true, "location": true },
+    { "name": "Mom", "handle": "mom@icloud.com", "braille": true, "location": false }
+  ]
+}

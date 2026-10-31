@@ -57,7 +57,8 @@ def text_to_cells(text: str) -> list[tuple[int, str]]:
     """Return (mask, label) per cell. Labels are what the dashboard shows under each cell."""
     cells: list[tuple[int, str]] = []
     in_number = False
-    for ch in normalize(text).lower():
+    # Callers decide the length limit (camera words vs. messages); don't trim here.
+    for ch in normalize(text, max_len=len(text or "")).lower():
         if ch.isdigit():
             if not in_number:
                 cells.append((NUMBER_SIGN, "#"))

@@ -82,16 +82,17 @@ def test_pacer_spells_word_with_blank_between_letters():
 
     async def run():
         pacer = BraillePacer(link, on_change)
+        pacer.mode = "auto"
         await pacer.say("door")
         while pacer.busy:
             await asyncio.sleep(0.01)
 
     try:
         asyncio.run(run())
-        assert wait_for(lambda: len(fake.received) >= 9)
-        # leading 00 from connect, then D,0,O,0,O,0,R,0, then 00 for idle
-        sent = fake.received[1:]
-        assert sent[:8] == [0x19, 0, 0x15, 0, 0x15, 0, 0x17, 0]
+        assert wait_for(lambda: len(fake.received) >= 8)
+        # D, down, O, down, O, down, R, word gap (the connect handshake moves no servos)
+        assert fake.received[:8] == [0x19, 0, 0x15, 0, 0x15, 0, 0x17, 0]
+        assert fake.host_mode  # backend put the board in Mac mode
         assert states[-1]["busy"] is False
     finally:
         link.stop()
@@ -131,3 +132,90 @@ def test_app_say_and_frame_endpoints(monkeypatch):
                         words.add(state["braille"]["word"])
                 assert "DOOR" in words
                 assert main.hub.telemetry["level"] == 2
+
+
+class StubLink:
+    """Records (time, mask) for every cell change instead of talking to a board."""
+
+    def __init__(self):
+        self.writes = []
+
+    def write_mask(self, mask):
+        self.writes.append((time.monotonic(), mask))
+        return True
+
+    def write_frame(self, mask, lcd=None):
+        self.lcd = lcd
+        return self.write_mask(mask)
+
+
+def _pacer(link, hold=60, gap=20, word_gap=150, mode="auto"):
+    async def on_change(_state):
+        pass
+
+    pacer = BraillePacer(link, on_change)
+    pacer.set_timing(hold, gap, word_gap)
+    pacer.mode = mode
+    return pacer
+
+
+def _gap_after(writes, index):
+    """Seconds the cell stayed in writes[index] before the next change."""
+    return writes[index + 1][0] - writes[index][0]
+
+
+def test_space_in_phrase_is_a_word_gap_not_a_blank_letter():
+    link = StubLink()
+
+    async def run():
+        pacer = _pacer(link)
+        await pacer.say("a b")
+        while pacer.busy:
+            await asyncio.sleep(0.005)
+
+    asyncio.run(run())
+    masks = [m for _, m in link.writes]
+    assert masks == [0x01, 0x00, 0x03, 0x00]  # A, down, B, down: no blank "space" letter
+    assert abs(_gap_after(link.writes, 1) - 0.150) < 0.04  # down time between words
+    assert abs(_gap_after(link.writes, 0) - 0.060) < 0.04  # letter hold
+
+
+def test_queued_word_starts_after_exactly_one_word_gap():
+    link = StubLink()
+
+    async def run():
+        pacer = _pacer(link)
+        await pacer.say("ab")
+        assert await pacer.queue("c") == "C"
+        assert pacer.state()["next"] == "C"
+        while pacer.busy:
+            await asyncio.sleep(0.005)
+        assert pacer.state()["next"] == ""
+
+    asyncio.run(run())
+    masks = [m for _, m in link.writes]
+    assert masks == [0x01, 0x00, 0x03, 0x00, 0x09, 0x00]  # A, gap, B, word gap, C, word gap
+    assert abs(_gap_after(link.writes, 1) - 0.020) < 0.03  # between letters
+    assert abs(_gap_after(link.writes, 3) - 0.150) < 0.04  # between words
+
+
+def test_say_interrupts_and_drops_queue():
+    link = StubLink()
+
+    async def run():
+        pacer = _pacer(link, hold=200)
+        await pacer.say("ab")
+        await pacer.queue("c")
+        await asyncio.sleep(0.05)
+        await pacer.say("z")
+        while pacer.busy:
+            await asyncio.sleep(0.005)
+
+    asyncio.run(run())
+    masks = [m for _, m in link.writes]
+    assert masks[0] == 0x01 and 0x35 in masks and 0x09 not in masks  # Z replaced AB, C dropped
+
+
+def test_messages_are_not_trimmed_to_camera_word_length():
+    labels = [label for _, label in text_to_cells("DINNER IS READY AT 7")]
+    assert labels[-2:] == ["#", "7"] and len(labels) == 21

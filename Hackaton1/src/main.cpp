@@ -12,11 +12,16 @@
 //              LC              clear the LCD
 //              LA              return LCD to automatic (joystick) display
 //
+//  Mac mode    HN              Lexis backend drives servos + LCD; the joystick
+//                              only reports JOY L / JOY R / JOY P / JOY U / JOY D
+//              HF              back to the local alphabet mode (also automatic
+//                              when the Mac closes the serial port)
+//
 //  Servo / joystick / TS commands can be chained with commas, spaces,
 //  semicolons or newlines.  L1: and L2: take the REST OF THE LINE as
 //  their text, so put each one on its own line.
 //
-//  Replies: OK <cmd> / ERR <cmd>, plus events CHAR, MSG, PLAY START/DONE
+//  Replies: OK <cmd> / ERR <cmd>, plus events CHAR, MSG, PLAY START/DONE, JOY
 // =====================================================================
 
 // ---------- Servo config ----------
@@ -44,6 +49,15 @@ const unsigned long REPEAT_RATE_MS  = 220;
 
 const unsigned long PLAY_STEP_MS = 1200;    // how long each letter is held
 const unsigned long PLAY_GAP_MS  = 600;     // flat pause between letters
+
+// ---------- Mac (host) navigation mode ----------
+// Sent "HN" by the Lexis backend. The Mac then owns the message and position, so the
+// cell, LCD and dashboard can't disagree; the joystick just reports moves. One report
+// per push (the stick must return to centre) and at least HOST_STEP_GAP_MS apart.
+const unsigned long HOST_STEP_GAP_MS = 200;
+bool hostNav = false;
+int hostLastX = 0;
+unsigned long hostLastStep = 0;
 
 // ---------- LCD (16x2 HD44780, 4-bit mode) ----------
 //                 RS, E, D4, D5,  D6,   D7
@@ -282,7 +296,32 @@ bool buttonPressed() {
   return false;
 }
 
+// Mac mode: report moves only, no local action and no auto-repeat
+void handleJoystickHost() {
+  if (joyOk) {
+    int dx = readDir(axisX, JOY_X, INVERT_X);
+    if (dx != hostLastX) {
+      hostLastX = dx;
+      if (dx != 0 && millis() - hostLastStep >= HOST_STEP_GAP_MS) {
+        hostLastStep = millis();
+        Serial.println(dx < 0 ? "JOY L" : "JOY R");
+      }
+    }
+
+    int dy = readDir(axisY, JOY_Y, INVERT_Y);
+    if (dy != lastYDir) {
+      lastYDir = dy;
+      if (dy == 1) Serial.println("JOY U");
+      else if (dy == -1) Serial.println("JOY D");
+    }
+  }
+
+  if (buttonPressed()) Serial.println("JOY P");
+}
+
 void handleJoystick() {
+  if (hostNav) { handleJoystickHost(); return; }
+
   if (joyOk) {
     int dx = readDir(axisX, JOY_X, INVERT_X);
     if (axisStep(axisX, dx)) actionStep(dx);
@@ -336,6 +375,32 @@ void processToken(const char *t) {
   if (isCmd(t, 'J', 'U')) { reply(actionPlay(),   t); return; }
   if (isCmd(t, 'J', 'D')) { reply(actionDelete(), t); return; }
   if (isCmd(t, 'J', 'P')) { reply(actionPress(),  t); return; }
+
+  // Joystick diagnostics: JV = live raw values + calibrated centres, JC = re-measure centre
+  if (isCmd(t, 'J', 'V')) {
+    Serial.print("JOYV X=");  Serial.print(analogRead(JOY_X));
+    Serial.print(" Y=");      Serial.print(analogRead(JOY_Y));
+    Serial.print(" SW=");     Serial.print(digitalRead(JOY_SW));
+    Serial.print(" CX=");     Serial.print(axisX.center);
+    Serial.print(" CY=");     Serial.print(axisY.center);
+    Serial.print(" OK=");     Serial.println(joyOk ? 1 : 0);
+    return;
+  }
+  if (isCmd(t, 'J', 'C')) {
+    joyOk = JOY_ENABLED && calibrateAxis(axisX, JOY_X) && calibrateAxis(axisY, JOY_Y);
+    reply(joyOk, t);
+    return;
+  }
+
+  // Mac navigation mode
+  if (isCmd(t, 'H', 'N')) { hostNav = true; hostLastX = 0; reply(true, t); return; }
+  if (isCmd(t, 'H', 'F')) {
+    hostNav = false;
+    lcdManual = false;
+    applyCurrentChar();
+    reply(true, t);
+    return;
+  }
 
   // LCD control
   if (isCmd(t, 'L', 'C')) {
@@ -456,4 +521,11 @@ void loop() {
   refreshServos();
   handleSerial();
   handleJoystick();
+
+  // Mac went away (serial port closed): fall back to the local alphabet mode
+  if (hostNav && !Serial) {
+    hostNav = false;
+    lcdManual = false;
+    applyCurrentChar();
+  }
 }

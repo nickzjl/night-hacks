@@ -38,7 +38,9 @@ PROMPT = (
     "Otherwise name the main object or obstacle in the path, such as DOOR, CHAIR, TABLE, PERSON, "
     "STAIRS, TREE, WALL, BOTTLE or LAPTOP. "
     f"Use one common English word, letters or digits only, at most {MAX_WORD} characters. "
-    "If nothing notable is visible, or the image is too dark or blurry, return an empty word with kind none."
+    "If nothing notable is visible, or the image is too dark or blurry, return an empty word with kind none. "
+    "Also give scene: what is ahead in at most 10 plain words (e.g. 'glass door at a building entrance'), "
+    "or an empty string if you can't tell."
 )
 
 SCHEMA = {
@@ -46,8 +48,9 @@ SCHEMA = {
     "properties": {
         "word": {"type": "string"},
         "kind": {"type": "string", "enum": ["object", "sign", "none"]},
+        "scene": {"type": "string"},
     },
-    "required": ["word", "kind"],
+    "required": ["word", "kind", "scene"],
     "additionalProperties": False,
 }
 
@@ -60,6 +63,7 @@ class Recognition:
     kind: str
     latency_ms: int
     model: str
+    scene: str = ""
 
 
 def _flag(name: str, default: bool) -> bool:
@@ -84,7 +88,8 @@ class Recognizer:
         start = time.monotonic()
         if self.mock:
             time.sleep(0.5)
-            return Recognition(next(self._mock_words), "object", int((time.monotonic() - start) * 1000), "mock")
+            word = next(self._mock_words)
+            return Recognition(word, "object", int((time.monotonic() - start) * 1000), "mock", f"(mock) a {word.lower()} ahead")
 
         b64 = base64.standard_b64encode(jpeg).decode("ascii")
         request = dict(
@@ -108,7 +113,8 @@ class Recognizer:
         data = json.loads(text) if text else {}
         word = normalize(data.get("word", ""), max_len=MAX_WORD)
         kind = data.get("kind", "none") if word else "none"
-        return Recognition(word, kind, int((time.monotonic() - start) * 1000), message.model)
+        scene = " ".join((data.get("scene") or "").split()[:12])
+        return Recognition(word, kind, int((time.monotonic() - start) * 1000), message.model, scene)
 
     def _create(self, request: dict):
         if self._use_fallbacks:

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		17B727A30E24D6C632DFD3AF /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD782B3A84D0193B0421831 /* Haptics.swift */; };
+		2D15103EDC15F66AE100A483 /* LocationTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E41BDB722B0E9AE670CFD69 /* LocationTracker.swift */; };
 		3D86CE888C80E02225FB3365 /* DepthProximity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50598420F61AF0B810A9A4B2 /* DepthProximity.swift */; };
 		66934340308953C657D08737 /* NightHacksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */; };
 		98C8B363B3525E8AA6A84A89 /* FrameProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */; };
@@ -25,6 +26,7 @@
 		6FD782B3A84D0193B0421831 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightHacksApp.swift; sourceTree = "<group>"; };
 		779D48284C3609A0A1123F9B /* BackendLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendLink.swift; sourceTree = "<group>"; };
+		8E41BDB722B0E9AE670CFD69 /* LocationTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationTracker.swift; sourceTree = "<group>"; };
 		E5B24B75228CF3121DCDABDF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameProcessor.swift; sourceTree = "<group>"; };
 		FBDA8C56D0126539ED5A0FCA /* NightHacks.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NightHacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -50,6 +52,7 @@
 				F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */,
 				6FD782B3A84D0193B0421831 /* Haptics.swift */,
 				E5B24B75228CF3121DCDABDF /* Info.plist */,
+				8E41BDB722B0E9AE670CFD69 /* LocationTracker.swift */,
 				721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */,
 			);
 			path = NightHacks;
@@ -129,6 +132,7 @@
 				C93685B8F0E801B21C39238F /* Engine.swift in Sources */,
 				98C8B363B3525E8AA6A84A89 /* FrameProcessor.swift in Sources */,
 				17B727A30E24D6C632DFD3AF /* Haptics.swift in Sources */,
+				2D15103EDC15F66AE100A483 /* LocationTracker.swift in Sources */,
 				66934340308953C657D08737 /* NightHacksApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -207,6 +211,7 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Talks to the Night Hacks Mac over Bluetooth when Wi-Fi can't reach it.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "The camera and LiDAR see obstacles and objects in front of you.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Sends camera frames to the Night Hacks Mac for recognition and Braille output.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lexis shares your location with your trusted contacts only while you have sharing turned on.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
@@ -235,6 +240,7 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Talks to the Night Hacks Mac over Bluetooth when Wi-Fi can't reach it.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "The camera and LiDAR see obstacles and objects in front of you.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Sends camera frames to the Night Hacks Mac for recognition and Braille output.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Lexis shares your location with your trusted contacts only while you have sharing turned on.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;

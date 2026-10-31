@@ -34,6 +34,8 @@ from fastapi.responses import FileResponse
 
 from .ble_link import BLELink
 from .display import BraillePacer
+from .lexis import Lexis
+from .lexis_ai import BRAILLE_MAX
 from .serial_link import SerialLink
 from .vision import Recognizer
 
@@ -43,6 +45,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 STATIC = Path(__file__).with_name("static")
 RECOGNIZE_EVERY_S = float(os.getenv("RECOGNIZE_EVERY_S", "2.5"))
 REPEAT_SUPPRESS_S = float(os.getenv("REPEAT_SUPPRESS_S", "10"))
+LOOKAHEAD_S = float(os.getenv("LOOKAHEAD_S", "4.5"))  # start recognizing this long before a word ends
+NAV_IDLE_S = float(os.getenv("NAV_IDLE_S", "6"))       # manual mode: no new camera word while reading
+MESSAGE_HOLD_S = float(os.getenv("MESSAGE_HOLD_S", "120"))  # an unread message keeps the cell this long
 FRAME_FRESH_S = 4.0  # Bluetooth frames arrive about once a second
 UI_FRAME_EVERY_S = 0.2
 PHONE_SILENT_S = 5.0  # no frame or telemetry for this long = dead link (e.g. cable pulled, Wi-Fi drop)
@@ -67,6 +72,8 @@ class Hub:
         self.recognizer = Recognizer()
         self.pacer = BraillePacer(self.link, self.on_braille)
         self.ble = BLELink(self.on_frame, self.on_phone_json, self.event)
+        self.recognition_paused_until = 0.0  # loved-ones' messages own the cell until then
+        self.lexis = Lexis(self)
         self._last_ui_frame = 0.0
 
     # ---- outbound -------------------------------------------------------------------------
@@ -94,6 +101,7 @@ class Hub:
                 "last": self.recognition,
             },
             "events": self.events[-12:],
+            "lexis": self.lexis.state(),
         }
 
     def event(self, text: str) -> None:
@@ -117,6 +125,41 @@ class Hub:
     def on_phone_json(self, data: dict) -> None:
         if data.get("type") == "telemetry":
             self.telemetry, self.telemetry_at = data, time.monotonic()
+        elif data.get("type") in ("companion", "location"):
+            asyncio.get_running_loop().create_task(self.lexis.on_phone(data))
+
+    async def on_board_line(self, line: str) -> None:
+        """Lines from the Feather: joystick moves (JOY L / R / P; U and D unused),
+        joystick readouts (JOYV ...), boot info and errors. All go to the event log."""
+        self.event(f"board: {line}")
+        if not line.startswith("JOY "):
+            return
+        move = line.split()[-1]
+        if move == "L":
+            await self.pacer.step(-1)
+        elif move == "R":
+            await self.pacer.step(1)
+        elif move == "P":
+            await self.pacer.restart()
+
+    async def braille_message(self, text: str, sender: str) -> float:
+        """Put a loved one's message on the cell. Manual mode: it loads at its first character
+        and camera words can't replace it until it's read to the end (or MESSAGE_HOLD_S).
+        Auto mode: it cuts in on a camera word, waits behind another message, and pauses
+        camera recognition until it's done. Returns seconds until finished (0 in manual mode)."""
+        if self.pacer.mode == "manual":
+            await self.pacer.say(text, max_len=BRAILLE_MAX, priority=1)
+            self.event(f"braille ← {text} (message from {sender})")
+            return 0.0
+        wait = self.pacer.time_left() if (self.pacer.busy and self.pacer.priority >= 1) else 0.0
+        if wait:
+            await self.pacer.queue(text, max_len=BRAILLE_MAX, priority=1)
+        else:
+            await self.pacer.say(text, max_len=BRAILLE_MAX, priority=1)
+        seconds = wait + self.pacer.estimate(text, BRAILLE_MAX)
+        self.recognition_paused_until = time.monotonic() + seconds
+        self.event(f"braille ← {text} (message from {sender})")
+        return seconds
 
     async def send_phones(self, message: dict) -> None:
         if message.get("type") != "ping":  # Bluetooth notices dead links by itself
@@ -160,6 +203,14 @@ class Hub:
         elif kind == "clear":
             await self.pacer.clear()
             self.event("cleared")
+        elif kind == "nav":
+            direction = int(msg.get("dir", 0))
+            await (self.pacer.restart() if direction == 0 else self.pacer.step(direction))
+        elif kind == "mode":
+            await self.pacer.set_mode(str(msg.get("mode", "")))
+            self.event(f"Braille mode: {self.pacer.mode}")
+        elif kind == "stop_sharing":
+            await self.lexis.stop_sharing(source="dashboard")
         elif kind == "selftest":
             await self.pacer.clear()
             await asyncio.to_thread(self.link.self_test)
@@ -175,7 +226,16 @@ class Hub:
             if self.recognizing or not fresh:
                 continue  # a forced request waits for the next fresh frame
             forced = self.force_recognize
-            if not forced and (not self.auto or self.pacer.busy or now - self.last_request_at < RECOGNIZE_EVERY_S):
+            # While a word is being spelled, look ahead only near its end, so the next word is
+            # ready when the word gap finishes instead of waiting on Claude afterwards.
+            if self.pacer.mode == "manual":
+                # Don't pull text away while someone is reading it with the joystick.
+                cell_ready = (not self.pacer.holding_message(MESSAGE_HOLD_S)
+                              and now - self.pacer.last_nav_at >= NAV_IDLE_S)
+            else:
+                cell_ready = not self.pacer.busy or (self.pacer.time_left() <= LOOKAHEAD_S and not self.pacer.next_word)
+            message_playing = now < self.recognition_paused_until
+            if not forced and (not self.auto or not cell_ready or message_playing or now - self.last_request_at < RECOGNIZE_EVERY_S):
                 continue
             self.force_recognize = False
             self.recognizing = True
@@ -183,15 +243,27 @@ class Hub:
             await self.broadcast_ui(self.state())
             try:
                 result = await asyncio.to_thread(self.recognizer.recognize, self.frame)
-                self.recognition = {"word": result.word, "kind": result.kind, "latency_ms": result.latency_ms, "model": result.model, "error": ""}
+                self.recognition = {"word": result.word, "kind": result.kind, "scene": result.scene, "latency_ms": result.latency_ms, "model": result.model, "error": ""}
+                self.lexis.add_observation(result.word, result.kind, result.scene)
                 await self.send_phones({"type": "status", "text": f"Saw: {result.word or 'nothing'} ({result.latency_ms} ms)"})
                 if not result.word:
                     continue
-                repeat = result.word == self.pacer.last_word and time.monotonic() - self.pacer.last_word_at < REPEAT_SUPPRESS_S
-                if repeat and not forced:
+                source = f"{result.model}, {result.latency_ms} ms"
+                if forced:
+                    await self.say(result.word, source)
+                    continue
+                spelling_it = (self.pacer.busy or self.pacer.mode == "manual") and result.word == self.pacer.word
+                said_recently = result.word == self.pacer.last_word and time.monotonic() - self.pacer.last_word_at < REPEAT_SUPPRESS_S
+                if spelling_it or said_recently:
                     self.event(f"saw {result.word} again, not repeating")
                     continue
-                await self.say(result.word, f"{result.model}, {result.latency_ms} ms")
+                if time.monotonic() < self.recognition_paused_until:
+                    continue  # a loved one's message arrived while Claude was looking
+                if self.pacer.busy:
+                    await self.pacer.queue(result.word)
+                    self.event(f"next up: {result.word} ({source})")
+                else:
+                    await self.say(result.word, source)
             except Exception as exc:
                 self.recognition = {**self.recognition, "error": str(exc)[:300]}
                 self.event(f"recognition failed: {exc}")
@@ -217,17 +289,27 @@ hub = Hub()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    loop = asyncio.get_running_loop()
+    # The serial thread hands joystick events and (re)connects to the event loop.
+    hub.link.on_line = lambda line: loop.call_soon_threadsafe(lambda: loop.create_task(hub.on_board_line(line)))
+    hub.link.on_connect = lambda: loop.call_soon_threadsafe(lambda: loop.create_task(hub.pacer.refresh()))
     hub.link.start()
+    hub.event(f"Braille mode: {hub.pacer.mode}")
     if hub.recognizer.mock:
         hub.event(f"recognizer in MOCK mode: {hub.recognizer.mock_reason}")
     else:
         hub.event("recognizer live (Claude)")
     hub.event(f"serial: {hub.link.setting}")
     hub.event("bluetooth: scanning for the phone" if hub.ble.enabled else "bluetooth: off")
+    photon = hub.lexis.photon.status()
+    hub.event("iMessage: Photon " + ("configured" if photon["enabled"] else f"offline ({photon['last_error']})"))
+    hub.event(f"lexis: {len(hub.lexis.contacts)} approved contact(s), wearer {hub.lexis.wearer}")
     tasks = [
         asyncio.create_task(hub.recognition_loop()),
         asyncio.create_task(hub.status_loop()),
         asyncio.create_task(hub.ble.run()),
+        asyncio.create_task(hub.lexis.photon.run()),
+        asyncio.create_task(hub.lexis.tick_loop()),
     ]
     yield
     for task in tasks:
@@ -289,6 +371,68 @@ async def api_clear():
     return {"cleared": True}
 
 
+@app.get("/api/lexis")
+def api_lexis():
+    return hub.lexis.state()
+
+
+@app.post("/api/lexis/stop-sharing")
+async def api_stop_sharing():
+    """Immediate stop from the Mac (the wearer's phone switch does the same)."""
+    await hub.lexis.stop_sharing(source="dashboard")
+    return {"sharing": hub.lexis.sharing}
+
+
+@app.post("/api/lexis/reload-contacts")
+def api_reload_contacts():
+    hub.lexis.load_contacts()
+    return {"contacts": len(hub.lexis.contacts), "wearer": hub.lexis.wearer}
+
+
+@app.post("/api/lexis/simulate")
+async def api_simulate(payload: dict = Body(...)):
+    """Testing without Photon: {"from": "+14155550123", "text": "where is he?"}. Replies are returned, not sent."""
+    photon = hub.lexis.photon
+    inbound = photon.simulate(payload.get("from", ""), payload.get("text", ""))
+    before = len(photon.sent)
+    await hub.lexis.on_imessage(inbound)
+    return {"replies": [m["text"] for m in list(photon.sent)[before:] if m["space_id"] == inbound.space_id]}
+
+
+@app.post("/api/lexis/phone")
+async def api_phone(payload: dict = Body(...)):
+    """Testing without the iPhone: inject a "companion" or "location" message."""
+    await hub.lexis.on_phone(payload)
+    return hub.lexis.state()
+
+
+@app.post("/api/nav")
+async def api_nav(payload: dict = Body(...)):
+    """Virtual joystick: {"dir": -1} left, {"dir": 1} right, {"dir": 0} back to the first character."""
+    await hub.command({"type": "nav", "dir": payload.get("dir", 0)})
+    return hub.pacer.state()
+
+
+@app.post("/api/mode")
+async def api_mode(payload: dict = Body(...)):
+    """{"mode": "manual"} (joystick) or {"mode": "auto"} (timed playback)."""
+    await hub.command({"type": "mode", "mode": payload.get("mode", "")})
+    return hub.pacer.state()
+
+
+BOARD_COMMANDS = {"JV", "JC", "TS", "HN", "LA"}
+
+
+@app.post("/api/board")
+async def api_board(payload: dict = Body(...)):
+    """Send a diagnostic command to the Feather: JV (joystick readout), JC (recalibrate
+    joystick centre), TS (servo self-test), HN (Mac mode), LA (LCD back to the board)."""
+    cmd = str(payload.get("cmd", "")).upper()
+    if cmd not in BOARD_COMMANDS:
+        return {"error": f"allowed: {sorted(BOARD_COMMANDS)}"}
+    return {"sent": await asyncio.to_thread(hub.link.write_line, cmd)}
+
+
 @app.post("/api/selftest")
 async def api_selftest():
     await hub.command({"type": "selftest"})
@@ -314,9 +458,7 @@ async def ws_phone(ws: WebSocket):
             if msg.get("bytes"):
                 await hub.on_frame(msg["bytes"])
             elif msg.get("text"):
-                data = json.loads(msg["text"])
-                if data.get("type") == "telemetry":
-                    hub.telemetry, hub.telemetry_at = data, time.monotonic()
+                hub.on_phone_json(json.loads(msg["text"]))
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:

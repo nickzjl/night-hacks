@@ -24,6 +24,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Night Hacks
         INFOPLIST_KEY_NSCameraUsageDescription: The camera and LiDAR see obstacles and objects in front of you.
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: Sends camera frames to the Night Hacks Mac for recognition and Braille output.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Lexis shares your location with your trusted contacts only while you have sharing turned on.
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Talks to the Night Hacks Mac over Bluetooth when Wi-Fi can't reach it.
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UIRequiresFullScreen: YES
