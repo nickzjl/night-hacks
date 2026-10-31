@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Night Hacks</title>
+<style>
+  :root {
+    --bg: #0b0d12; --panel: #141821; --line: #232937; --text: #e9edf5; --muted: #8a93a6;
+    --dot-off: #2a3040; --dot-on: #ffd23f; --ok: #3ddc84; --warn: #ffb020; --bad: #ff5d5d;
+    --l1: #3ddc84; --l2: #ffd23f; --l3: #ff9a3c; --l4: #ff5d5d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 -apple-system, system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0 12px 0 0; }
+  .pill { padding: 4px 10px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .pill b { color: var(--text); font-weight: 600; }
+  .pill.ok { border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+  .pill.ok::before, .pill.bad::before, .pill.warn::before { content: "●"; margin-right: 6px; }
+  .pill.ok::before { color: var(--ok); } .pill.bad::before { color: var(--bad); } .pill.warn::before { color: var(--warn); }
+  main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); gap: 16px; padding: 16px 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .camera { position: relative; aspect-ratio: 4 / 3; background: #000; border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
+  .camera img { width: 100%; height: 100%; object-fit: contain; }
+  .camera .empty { color: var(--muted); }
+  .overlay { position: absolute; left: 12px; bottom: 12px; right: 12px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+  .dist { font-size: 40px; font-weight: 700; text-shadow: 0 2px 8px #000; font-variant-numeric: tabular-nums; }
+  .bars { display: flex; gap: 5px; }
+  .bars span { width: 26px; height: 12px; border-radius: 3px; background: #ffffff22; }
+  .cellwrap { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+  .cell { display: grid; grid-template-columns: repeat(2, 54px); grid-auto-rows: 54px; gap: 16px; padding: 20px; background: #0d1017; border-radius: 16px; border: 1px solid var(--line); grid-auto-flow: column; grid-template-rows: repeat(3, 54px); }
+  .cell i { border-radius: 50%; background: var(--dot-off); transition: background .08s, box-shadow .08s; }
+  .cell i.on { background: var(--dot-on); box-shadow: 0 0 18px #ffd23f88; }
+  .word { font: 700 44px/1.1 ui-monospace, Menlo, monospace; letter-spacing: .08em; word-break: break-all; }
+  .word span { color: #ffffff55; } .word span.cur { color: var(--dot-on); }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  button, input { font: inherit; color: var(--text); background: #1d2230; border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; }
+  button { cursor: pointer; } button:hover { border-color: #3a4256; }
+  button.primary { background: #2b5cff; border-color: #2b5cff; }
+  button.on { background: #1f3d2b; border-color: var(--ok); }
+  input { min-width: 0; flex: 1; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+  pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; max-height: 220px; overflow: auto; }
+  .stack { display: grid; gap: 16px; align-content: start; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Night Hacks</h1>
+  <span class="pill bad" id="p-ws">dashboard offline</span>
+  <span class="pill" id="p-phone">phone —</span>
+  <span class="pill" id="p-serial">serial —</span>
+  <span class="pill" id="p-ai">recognizer —</span>
+</header>
+<main>
+  <section class="panel">
+    <div class="label">Camera (from phone)</div>
+    <div class="camera">
+      <img id="frame" alt="" hidden />
+      <div class="empty" id="frame-empty">No frames yet</div>
+      <div class="overlay">
+        <div class="dist" id="dist">—</div>
+        <div class="bars" id="bars"><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <div class="meta" id="phone-meta"></div>
+    <div class="controls">
+      <button id="btn-auto">Auto recognition</button>
+      <button id="btn-recognize" class="primary">Recognize now</button>
+      <button id="btn-webcam">Use Mac webcam as phone</button>
+    </div>
+  </section>
+  <section class="stack">
+    <div class="panel">
+      <div class="label">Braille cell</div>
+      <div class="cellwrap">
+        <div class="cell" id="cell"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div>
+          <div class="word" id="word">—</div>
+          <div class="meta" id="braille-meta"></div>
+        </div>
+      </div>
+      <div class="controls" id="demo-words"></div>
+      <form class="row" id="say-form">
+        <input id="say-input" placeholder="Type a word to spell" maxlength="12" autocomplete="off" />
+        <button type="submit">Spell</button>
+        <button type="button" id="btn-clear">Clear</button>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="label">Recognition</div>
+      <div id="ai-last" class="meta"></div>
+    </div>
+  </section>
+</main>
+<div class="grid2" style="padding: 0 20px 20px">
+  <div class="panel"><div class="label">Events</div><pre id="events"></pre></div>
+  <div class="panel"><div class="label">Serial (board replies)</div><pre id="serial-lines"></pre></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const DEMO_WORDS = ["DOOR", "CHAIR", "EXIT", "TREE", "PERSON", "STAIRS"];
+const levelColors = ["", "var(--l1)", "var(--l2)", "var(--l3)", "var(--l4)"];
+let ws, state = null, frameUrl = null;
+
+DEMO_WORDS.forEach(w => {
+  const b = document.createElement("button");
+  b.textContent = w;
+  b.onclick = () => send({ type: "say", word: w });
+  $("demo-words").appendChild(b);
+});
+
+function send(msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws/ui`);
+  ws.binaryType = "blob";
+  ws.onopen = () => setPill("p-ws", "ok", "dashboard <b>live</b>");
+  ws.onclose = () => { setPill("p-ws", "bad", "dashboard offline"); setTimeout(connect, 1000); };
+  ws.onmessage = ev => {
+    if (typeof ev.data !== "string") return showFrame(ev.data);
+    const msg = JSON.parse(ev.data);
+    if (msg.type === "state") render(msg);
+  };
+}
+
+function showFrame(blob) {
+  if (frameUrl) URL.revokeObjectURL(frameUrl);
+  frameUrl = URL.createObjectURL(blob);
+  $("frame").src = frameUrl;
+  $("frame").hidden = false;
+  $("frame-empty").hidden = true;
+}
+
+function setPill(id, cls, html) { const el = $(id); el.className = `pill ${cls}`; el.innerHTML = html; }
+
+function render(s) {
+  state = s;
+  const p = s.phone, t = p.telemetry || {};
+  setPill("p-phone", p.connected ? "ok" : "bad", p.connected ? `phone <b>connected</b> · ${p.via}` : "phone <b>not connected</b>");
+  const ser = s.serial;
+  if (!ser.enabled) setPill("p-serial", "warn", "serial <b>off</b> (simulated)");
+  else if (ser.connected) setPill("p-serial", "ok", `serial <b>${ser.port}</b>`);
+  else setPill("p-serial", "bad", `serial <b>waiting</b> · ${ser.last_error || ""}`);
+  const ai = s.recognizer;
+  setPill("p-ai", ai.mock ? "warn" : "ok", ai.mock ? `recognizer <b>MOCK</b> · ${ai.mock_reason}` : "recognizer <b>Claude</b>");
+
+  const fresh = p.telemetry_age_s !== null && p.telemetry_age_s < 2;
+  $("dist").textContent = !fresh ? "—" : (t.distance == null ? "clear" : `${t.distance.toFixed(2)} m`);
+  [...$("bars").children].forEach((el, i) => el.style.background = fresh && i < t.level ? levelColors[i + 1] : "");
+  $("phone-meta").textContent = p.connected
+    ? `frames ${p.frames} · last ${p.frame_age_s ?? "—"} s ago${p.via === "bluetooth" ? ` (${p.ble.last_frame_ms} ms over BLE)` : ""} · depth pts ${t.points ?? "—"} · ${Math.round(t.fps || 0)} fps · image ${t.orientation || "—"}`
+    : "Open the Night Hacks app on the iPhone, or use the Mac webcam.";
+
+  const b = s.braille;
+  [...$("cell").children].forEach((el, bit) => el.classList.toggle("on", !!(b.mask & (1 << bit))));
+  const word = $("word");
+  word.innerHTML = "";
+  if (!b.labels.length) word.textContent = "—";
+  b.labels.forEach((ch, i) => { const sp = document.createElement("span"); sp.textContent = ch; if (i === b.index) sp.className = "cur"; word.appendChild(sp); });
+  const dots = [1,2,3,4,5,6].filter(d => b.mask & (1 << (d - 1)));
+  $("braille-meta").textContent = `${b.busy ? "spelling" : "idle"} · dots ${dots.join("-") || "none"} · hold ${b.timing_ms.hold} ms, gap ${b.timing_ms.gap} ms`;
+
+  $("btn-auto").classList.toggle("on", ai.auto);
+  $("btn-auto").textContent = `Auto recognition: ${ai.auto ? "on" : "off"}`;
+  const last = ai.last || {};
+  $("ai-last").textContent = ai.busy ? "Looking…" :
+    (last.error ? `Error: ${last.error}` : last.model ? `Last: ${last.word || "(nothing)"} · ${last.kind} · ${last.latency_ms} ms · ${last.model}` : `Runs every ${ai.every_s} s when the cell is idle.`);
+
+  $("events").textContent = s.events.map(e => `${e.t}  ${e.text}`).reverse().join("\n");
+  $("serial-lines").textContent = [`sent ${ser.last_sent ?? "—"} · ack ${ser.last_ack ?? "—"}${ser.ack_age_s != null ? ` (${ser.ack_age_s} s ago)` : ""}`, ...ser.lines.slice().reverse()].join("\n");
+}
+
+$("btn-auto").onclick = () => send({ type: "auto", enabled: !(state && state.recognizer.auto) });
+$("btn-recognize").onclick = () => send({ type: "recognize" });
+$("btn-clear").onclick = () => send({ type: "clear" });
+$("say-form").onsubmit = e => { e.preventDefault(); const w = $("say-input").value.trim(); if (w) send({ type: "say", word: w }); $("say-input").value = ""; };
+
+// Mac webcam stand-in: streams frames to /ws/phone exactly like the iPhone app.
+let cam = null;
+$("btn-webcam").onclick = async () => {
+  if (cam) { cam.stop(); cam = null; $("btn-webcam").textContent = "Use Mac webcam as phone"; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    const video = Object.assign(document.createElement("video"), { muted: true, playsInline: true, srcObject: stream });
+    await video.play();
+    const canvas = document.createElement("canvas");
+    const sock = new WebSocket(`ws://${location.host}/ws/phone`);
+    const timer = setInterval(() => {
+      if (sock.readyState !== 1 || !video.videoWidth) return;
+      canvas.width = 640; canvas.height = Math.round(640 * video.videoHeight / video.videoWidth);
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(b => b && sock.send(b), "image/jpeg", 0.6);
+    }, 300);
+    cam = { stop() { clearInterval(timer); sock.close(); stream.getTracks().forEach(t => t.stop()); } };
+    $("btn-webcam").textContent = "Stop Mac webcam";
+  } catch (e) { alert("Webcam unavailable: " + e.message); }
+};
+
+connect();
+</script>
+</body>
+</html>

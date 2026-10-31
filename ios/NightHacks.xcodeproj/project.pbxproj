@@ -1,0 +1,344 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		17B727A30E24D6C632DFD3AF /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FD782B3A84D0193B0421831 /* Haptics.swift */; };
+		3D86CE888C80E02225FB3365 /* DepthProximity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50598420F61AF0B810A9A4B2 /* DepthProximity.swift */; };
+		66934340308953C657D08737 /* NightHacksApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */; };
+		98C8B363B3525E8AA6A84A89 /* FrameProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */; };
+		AFF4140A43CE22513A06F710 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386689320648245718CD7936 /* ContentView.swift */; };
+		C93685B8F0E801B21C39238F /* Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A6F7FE7B9B297DDF2161D6 /* Engine.swift */; };
+		D60FFDEDFF2DC832E9C65E17 /* BackendLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779D48284C3609A0A1123F9B /* BackendLink.swift */; };
+		D94C69F6DC23E9C486DE1EFF /* BLELink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 276472B6BED493306CA50120 /* BLELink.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		01A6F7FE7B9B297DDF2161D6 /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
+		276472B6BED493306CA50120 /* BLELink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLELink.swift; sourceTree = "<group>"; };
+		386689320648245718CD7936 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		50598420F61AF0B810A9A4B2 /* DepthProximity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepthProximity.swift; sourceTree = "<group>"; };
+		6FD782B3A84D0193B0421831 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightHacksApp.swift; sourceTree = "<group>"; };
+		779D48284C3609A0A1123F9B /* BackendLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendLink.swift; sourceTree = "<group>"; };
+		E5B24B75228CF3121DCDABDF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameProcessor.swift; sourceTree = "<group>"; };
+		FBDA8C56D0126539ED5A0FCA /* NightHacks.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NightHacks.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		06837ED8B7D3646EA2E6F940 = {
+			isa = PBXGroup;
+			children = (
+				680019F76462A07F1C7B7737 /* NightHacks */,
+				C7CD7DC6947DC08E5BD32875 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		680019F76462A07F1C7B7737 /* NightHacks */ = {
+			isa = PBXGroup;
+			children = (
+				779D48284C3609A0A1123F9B /* BackendLink.swift */,
+				276472B6BED493306CA50120 /* BLELink.swift */,
+				386689320648245718CD7936 /* ContentView.swift */,
+				50598420F61AF0B810A9A4B2 /* DepthProximity.swift */,
+				01A6F7FE7B9B297DDF2161D6 /* Engine.swift */,
+				F73EFE927C33790F23BA1BE3 /* FrameProcessor.swift */,
+				6FD782B3A84D0193B0421831 /* Haptics.swift */,
+				E5B24B75228CF3121DCDABDF /* Info.plist */,
+				721D2E2A0CC4441FD274BA2C /* NightHacksApp.swift */,
+			);
+			path = NightHacks;
+			sourceTree = "<group>";
+		};
+		C7CD7DC6947DC08E5BD32875 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FBDA8C56D0126539ED5A0FCA /* NightHacks.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DE61E1C3D387D0DF364BF5AC /* NightHacks */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66195E6F1C104A7E0919B1C8 /* Build configuration list for PBXNativeTarget "NightHacks" */;
+			buildPhases = (
+				6FE32080C08732CF7FE407BC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NightHacks;
+			packageProductDependencies = (
+			);
+			productName = NightHacks;
+			productReference = FBDA8C56D0126539ED5A0FCA /* NightHacks.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		45F469836A0207D4E1E59318 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					DE61E1C3D387D0DF364BF5AC = {
+						DevelopmentTeam = A5HQBJWTL4;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 91FB7F181A6A79093DEF7FBE /* Build configuration list for PBXProject "NightHacks" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 06837ED8B7D3646EA2E6F940;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C7CD7DC6947DC08E5BD32875 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DE61E1C3D387D0DF364BF5AC /* NightHacks */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6FE32080C08732CF7FE407BC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D94C69F6DC23E9C486DE1EFF /* BLELink.swift in Sources */,
+				D60FFDEDFF2DC832E9C65E17 /* BackendLink.swift in Sources */,
+				AFF4140A43CE22513A06F710 /* ContentView.swift in Sources */,
+				3D86CE888C80E02225FB3365 /* DepthProximity.swift in Sources */,
+				C93685B8F0E801B21C39238F /* Engine.swift in Sources */,
+				98C8B363B3525E8AA6A84A89 /* FrameProcessor.swift in Sources */,
+				17B727A30E24D6C632DFD3AF /* Haptics.swift in Sources */,
+				66934340308953C657D08737 /* NightHacksApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0DDAD9AD1EC9B116497404FF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = A5HQBJWTL4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7B685E8E1C0403E370C93C43 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NightHacks/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Night Hacks";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Talks to the Night Hacks Mac over Bluetooth when Wi-Fi can't reach it.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera and LiDAR see obstacles and objects in front of you.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Sends camera frames to the Night Hacks Mac for recognition and Braille output.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nickzjl.nighthacks;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9D9C58AC1DF466CAFF93742F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NightHacks/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Night Hacks";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Talks to the Night Hacks Mac over Bluetooth when Wi-Fi can't reach it.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera and LiDAR see obstacles and objects in front of you.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Sends camera frames to the Night Hacks Mac for recognition and Braille output.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nickzjl.nighthacks;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FB6E4B4636F81C5E0452A1B6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = A5HQBJWTL4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		66195E6F1C104A7E0919B1C8 /* Build configuration list for PBXNativeTarget "NightHacks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B685E8E1C0403E370C93C43 /* Debug */,
+				9D9C58AC1DF466CAFF93742F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		91FB7F181A6A79093DEF7FBE /* Build configuration list for PBXProject "NightHacks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB6E4B4636F81C5E0452A1B6 /* Debug */,
+				0DDAD9AD1EC9B116497404FF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 45F469836A0207D4E1E59318 /* Project object */;
+}
