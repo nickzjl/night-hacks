@@ -52,10 +52,21 @@ def test_serial_link_talks_to_fake_feather():
     try:
         assert wait_for(lambda: link.connected), link.last_error
         assert link.write_mask(0x19)
-        assert wait_for(lambda: link.last_ack == "19"), link.status()
-        assert 0x19 in fake.received
+        # Kiya's sketch acks each token; the last one for D (dots 1-4-5) is "6S0".
+        assert wait_for(lambda: link.last_ack == "6S0"), link.status()
+        assert wait_for(lambda: 0x19 in fake.received)
+        assert link.last_sent == "1S1,2S0,3S0,4S1,5S1,6S0"
     finally:
         link.stop()
+
+
+def test_wire_formats():
+    from backend.serial_link import format_mask
+
+    assert format_mask(0x19, "servo") == "1S1,2S0,3S0,4S1,5S1,6S0"
+    assert format_mask(0x3F, "servo") == "1S1,2S1,3S1,4S1,5S1,6S1"
+    assert format_mask(0x00, "servo") == "1S0,2S0,3S0,4S0,5S0,6S0"
+    assert format_mask(0x19, "hex") == "19"
 
 
 def test_pacer_spells_word_with_blank_between_letters():

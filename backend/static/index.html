@@ -91,6 +91,7 @@
         <input id="say-input" placeholder="Type a word to spell" maxlength="12" autocomplete="off" />
         <button type="submit">Spell</button>
         <button type="button" id="btn-clear">Clear</button>
+        <button type="button" id="btn-selftest">Cell self-test</button>
       </form>
     </div>
     <div class="panel">
@@ -180,6 +181,7 @@ function render(s) {
 $("btn-auto").onclick = () => send({ type: "auto", enabled: !(state && state.recognizer.auto) });
 $("btn-recognize").onclick = () => send({ type: "recognize" });
 $("btn-clear").onclick = () => send({ type: "clear" });
+$("btn-selftest").onclick = () => send({ type: "selftest" });
 $("say-form").onsubmit = e => { e.preventDefault(); const w = $("say-input").value.trim(); if (w) send({ type: "say", word: w }); $("say-input").value = ""; };
 
 // Mac webcam stand-in: streams frames to /ws/phone exactly like the iPhone app.

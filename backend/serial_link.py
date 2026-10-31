@@ -1,7 +1,8 @@
-"""USB serial link to the Feather's CircuitPython firmware.
+"""USB serial link to the Feather that drives the six Braille servos.
 
-Protocol, host -> board: one cell per line, two uppercase hex digits + "\\n" (e.g. "19\\n").
-bit0 = dot 1 ... bit5 = dot 6. The board replies "OK 19" once the servos have moved.
+One line per cell state. With Kiya's Arduino sketch (default) the letter D (dots 1-4-5) is
+"1S1,2S0,3S0,4S1,5S1,6S0\\n" and the board answers "OK 1S1", "OK 2S0", ... per token.
+SERIAL_FORMAT=hex switches to firmware/code.py's two-hex-digit lines ("19\\n").
 
 Adapted from Bridge's serial_out.py, with these changes: the port stays open, because
 CircuitPython boards don't reset when it opens, so Bridge's 2 s wait isn't needed. It also
@@ -30,6 +31,20 @@ except ImportError:  # pragma: no cover - handled at runtime
 ADAFRUIT_VID = 0x239A
 BAUD = 115200  # ignored by USB CDC, but pyserial wants a value
 FAKE_FEATHER = Path(__file__).resolve().parent.parent / ".fake-feather"
+
+# Wire format, set by SERIAL_FORMAT:
+#   servo (default)  Kiya's Arduino sketch (Hackaton1/src/main.cpp): "1S1,2S0,3S0,4S1,5S1,6S0"
+#                    = servo n up (1) or flat (0); servo n is dot n. "TS" runs its self-test.
+#   hex              firmware/code.py (CircuitPython): two hex digits, e.g. "19"
+SERIAL_FORMAT = os.getenv("SERIAL_FORMAT", "servo").strip().lower()
+SELF_TEST = {"servo": "TS", "hex": "T"}
+
+
+def format_mask(mask: int, fmt: str | None = None) -> str:
+    mask &= 0x3F
+    if (fmt or SERIAL_FORMAT) == "hex":
+        return f"{mask:02X}"
+    return ",".join(f"{dot}S{(mask >> (dot - 1)) & 1}" for dot in range(1, 7))
 
 
 def find_feather_port() -> str | None:
@@ -77,7 +92,9 @@ class SerialLink:
         self._close()
 
     def write_mask(self, mask: int) -> bool:
-        line = f"{mask & 0x3F:02X}"
+        return self.write_line(format_mask(mask))
+
+    def write_line(self, line: str) -> bool:
         self.last_sent = line
         with self._lock:
             ser = self._ser
@@ -91,9 +108,13 @@ class SerialLink:
         self._close()
         return False
 
+    def self_test(self) -> bool:
+        return self.write_line(SELF_TEST.get(SERIAL_FORMAT, "TS"))
+
     def status(self) -> dict:
         return {
             "setting": self.setting,
+            "format": SERIAL_FORMAT,
             "enabled": self.enabled,
             "port": self.port,
             "connected": self.connected,

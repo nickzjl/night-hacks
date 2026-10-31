@@ -160,6 +160,10 @@ class Hub:
         elif kind == "clear":
             await self.pacer.clear()
             self.event("cleared")
+        elif kind == "selftest":
+            await self.pacer.clear()
+            await asyncio.to_thread(self.link.self_test)
+            self.event("cell self-test sent")
         await self.broadcast_ui(self.state())
 
     # ---- recognition loop -----------------------------------------------------------------
@@ -253,7 +257,18 @@ def api_state():
 
 @app.post("/api/say")
 async def api_say(payload: dict = Body(...)):
-    return {"word": await hub.say(payload.get("word", ""), "api")}
+    """{"word": "DOOR"}, optionally "hold_ms" / "gap_ms" for this word only."""
+    word = await hub.pacer.say(payload.get("word", ""), payload.get("hold_ms"), payload.get("gap_ms"))
+    if word:
+        hub.event(f"braille ← {word} (api)")
+    return {"word": word, "hold_ms": payload.get("hold_ms") or int(hub.pacer.hold * 1000)}
+
+
+@app.post("/api/timing")
+async def api_timing(payload: dict = Body(...)):
+    """Change letter timing for every word from now on: hold_ms, gap_ms, word_gap_ms."""
+    hub.pacer.set_timing(payload.get("hold_ms"), payload.get("gap_ms"), payload.get("word_gap_ms"))
+    return hub.pacer.state()["timing_ms"]
 
 
 @app.post("/api/recognize")
@@ -272,6 +287,12 @@ async def api_frame(request: Request):
 async def api_clear():
     await hub.pacer.clear()
     return {"cleared": True}
+
+
+@app.post("/api/selftest")
+async def api_selftest():
+    await hub.command({"type": "selftest"})
+    return {"sent": hub.link.last_sent}
 
 
 @app.websocket("/ws/phone")

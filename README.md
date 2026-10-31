@@ -30,13 +30,13 @@ iPhone app (ARKit LiDAR + haptics) --Bluetooth LE or Wi-Fi/USB--> Mac backend (C
 
 1. **Backend** (Mac): `python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt`, put `ANTHROPIC_API_KEY` in `backend/.env` (see `backend/.env.example`), then `open tools/run_backend.command`. It runs in macOS Terminal because Bluetooth needs Terminal's permission (allow it once). Dashboard: http://localhost:8765
 2. **iPhone**: plug it in, unlock, then `tools/run_ios.sh` (builds, installs, launches). Allow Camera, Local Network and Bluetooth. The app connects over Bluetooth on its own; Wi-Fi/USB is used instead when it can reach the Mac (the venue Wi-Fi blocks this). Proximity vibration runs on the phone and never needs the Mac.
-3. **Braille cell**: copy `firmware/code.py` to the Feather's `CIRCUITPY` drive and plug it into the Mac. The backend finds the board automatically (`SERIAL_PORT=auto`).
+3. **Braille cell**: flash Kiya's PlatformIO sketch (`Hackaton1/`) to the Feather and plug it into the Mac with a USB-C data cable. The backend finds the board automatically (`SERIAL_PORT=auto`).
 
 No hardware yet? Run `.venv/bin/python tools/fake_feather.py`; `SERIAL_PORT=auto` uses it until the real board is plugged in, then switches. No phone? Click **Use Mac webcam as phone** on the dashboard.
 
-**Serial protocol:** one line per cell, two hex digits + newline (`19\n` = dots 1-4-5 = D). bit0 = dot 1 … bit5 = dot 6. The board replies `OK 19`. Letter timing (`HOLD_MS`, `GAP_MS`, `WORD_GAP_MS`) lives on the Mac.
+**Serial protocol** (Kiya's sketch): one line per cell with a token per servo, `<servo>S<0|1>`, e.g. D (dots 1-4-5) = `1S1,2S0,3S0,4S1,5S1,6S0`. Servo n is dot n (pins `5 6 9 10 11 12`); 1 = horn up = dot raised. The board answers `OK 1S1` per token; `TS` runs its self-test (also the dashboard's **Cell self-test** button). Letter timing (`HOLD_MS`, `GAP_MS`, `WORD_GAP_MS`; default a new letter every 3.5 s) lives on the Mac and can be changed live with `POST /api/timing`.
 
-**Firmware calibration** (top of `firmware/code.py`): servo pins `D5 D6 D9 D10 D11 D12` = dots 1–6, `DOWN`/`UP` angles per dot. Servos get their own 5 V ≥3 A supply with ground tied to the Feather. Type `3F` + Enter in a serial terminal to raise all dots, `T` for a self-test.
+Alternative firmware: `firmware/code.py` (CircuitPython, two-hex-digit lines like `19`) works with `SERIAL_FORMAT=hex`. Either way, servos need their own 5 V ≥3 A supply with ground tied to the Feather.
 
 ## Environment variables
 
